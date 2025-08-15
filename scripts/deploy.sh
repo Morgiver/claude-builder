@@ -9,7 +9,7 @@ DEV_PATH="./.claude"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Auto-detect production path with fallback options
-if [ ! -z "$CLAUDE_CONFIG_PATH" ]; then
+if [ ! -z "${CLAUDE_CONFIG_PATH:-}" ]; then
     PRODUCTION_PATH="$CLAUDE_CONFIG_PATH"
     echo -e "${CYAN}Using custom path from CLAUDE_CONFIG_PATH: $PRODUCTION_PATH${NC}"
 else
@@ -26,12 +26,22 @@ else
     
     PRODUCTION_PATH=""
     for path in "${UNIX_PATHS[@]}"; do
-        parent_dir=$(dirname "$path")
-        if [ -d "$parent_dir" ] && [ -w "$parent_dir" ]; then
+        if [ -d "$path" ]; then
             PRODUCTION_PATH="$path"
             break
         fi
     done
+    
+    # If no existing directory found, try parent directories
+    if [ -z "$PRODUCTION_PATH" ]; then
+        for path in "${UNIX_PATHS[@]}"; do
+            parent_dir=$(dirname "$path")
+            if [ -d "$parent_dir" ] && [ -w "$parent_dir" ]; then
+                PRODUCTION_PATH="$path"
+                break
+            fi
+        done
+    fi
     
     # Default to first option if none found
     if [ -z "$PRODUCTION_PATH" ]; then
@@ -93,7 +103,7 @@ fi
 # Validate settings.json syntax
 SETTINGS_PATH="$DEV_PATH/settings.json"
 if [ -f "$SETTINGS_PATH" ]; then
-    if ! python3 -m json.tool "$SETTINGS_PATH" > /dev/null 2>&1 && ! jq empty "$SETTINGS_PATH" > /dev/null 2>&1; then
+    if ! node -e "JSON.parse(require('fs').readFileSync('$SETTINGS_PATH', 'utf8'))" > /dev/null 2>&1; then
         log_error "✗ Invalid settings.json syntax!"
         exit 1
     fi
