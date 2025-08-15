@@ -63,6 +63,9 @@ claude-builder/
 │   │   ├── examples/        # Command templates
 │   │   └── README.md        # Command documentation
 │   └── contexts/            # Documentation & configs
+├── 🧪 tests/                # Test framework & validation
+│   ├── README.md            # Testing documentation
+│   └── yolo-protection/     # YOLO mode protection tests
 └── 🛠️  scripts/              # Deployment automation
     ├── config.json          # Platform path configuration
     ├── deploy.ps1/.sh       # Deploy with backup
