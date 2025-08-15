@@ -78,11 +78,11 @@ claude-builder/
 
 **Claude Builder automatically detects your system** and deploys to the correct location:
 
-| Platform | Primary Path | Fallback Options |
-|----------|-------------|------------------|
-| 🪟 **Windows** | `%USERPROFILE%\.claude` | `%APPDATA%\claude` |
-| 🐧 **Linux** | `$HOME/.config/claude` | `$HOME/.claude` |
-| 🍎 **macOS** | `$HOME/.config/claude` | `$HOME/.claude`<br>`~/Library/Application Support/claude` |
+| Platform | Deployment Path |
+|----------|-----------------|
+| 🪟 **Windows** | `%USERPROFILE%\.claude` |
+| 🐧 **Linux** | `$HOME/.claude` |
+| 🍎 **macOS** | `$HOME/.claude` |
 
 ### Custom Path Override
 ```bash
