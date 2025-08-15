@@ -40,7 +40,7 @@ Write-Host "====================================" -ForegroundColor Cyan
 
 # Validate development configuration exists
 if (-not (Test-Path $DevPath)) {
-    Write-Host "✗ Development configuration not found at: $DevPath" -ForegroundColor Red
+    Write-Host "Development configuration not found at: $DevPath" -ForegroundColor Red
     exit 1
 }
 
@@ -49,10 +49,10 @@ try {
     $SettingsPath = Join-Path $DevPath "settings.json"
     if (Test-Path $SettingsPath) {
         $Settings = Get-Content $SettingsPath -Raw | ConvertFrom-Json
-        Write-Host "✓ settings.json syntax is valid" -ForegroundColor Green
+        Write-Host "settings.json syntax is valid" -ForegroundColor Green
     }
 } catch {
-    Write-Host "✗ Invalid settings.json syntax!" -ForegroundColor Red
+    Write-Host "Invalid settings.json syntax!" -ForegroundColor Red
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
@@ -65,16 +65,16 @@ if (-not $SkipBackup) {
         $BackupResult = & "$ScriptDir\backup.ps1"
         if ($LASTEXITCODE -eq 0) {
             $BackupPath = $BackupResult
-            Write-Host "✓ Backup created successfully" -ForegroundColor Green
+            Write-Host "Backup created successfully" -ForegroundColor Green
         } else {
-            Write-Host "✗ Backup failed!" -ForegroundColor Red
+            Write-Host "Backup failed!" -ForegroundColor Red
             if (-not $Force) {
                 Write-Host "Use -Force to deploy without backup" -ForegroundColor Yellow
                 exit 1
             }
         }
     } catch {
-        Write-Host "✗ Backup error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Backup error: $($_.Exception.Message)" -ForegroundColor Red
         if (-not $Force) {
             exit 1
         }
@@ -106,12 +106,20 @@ try {
         Write-Host "Created production directory: $ProductionPath" -ForegroundColor Green
     }
     
+    # Deploy CLAUDE-build.md as CLAUDE.md
+    $DevClaude = "CLAUDE-build.md"
+    $ProdClaude = Join-Path $ProductionPath "CLAUDE.md"
+    if (Test-Path $DevClaude) {
+        Copy-Item -Path $DevClaude -Destination $ProdClaude -Force
+        Write-Host "Deployed CLAUDE.md" -ForegroundColor Green
+    }
+    
     # Deploy settings.json
     $DevSettings = Join-Path $DevPath "settings.json"
     $ProdSettings = Join-Path $ProductionPath "settings.json"
     if (Test-Path $DevSettings) {
         Copy-Item -Path $DevSettings -Destination $ProdSettings -Force
-        Write-Host "✓ Deployed settings.json" -ForegroundColor Green
+        Write-Host "Deployed settings.json" -ForegroundColor Green
     }
     
     # Deploy agents directory
@@ -124,7 +132,7 @@ try {
         }
         Copy-Item -Path $DevAgents -Destination $ProdAgents -Recurse -Force
         $AgentCount = (Get-ChildItem -Path $ProdAgents -Filter "*.md" | Measure-Object).Count
-        Write-Host "✓ Deployed $AgentCount agents" -ForegroundColor Green
+        Write-Host "Deployed $AgentCount agents" -ForegroundColor Green
     }
     
     # Deploy hooks directory
@@ -137,7 +145,7 @@ try {
         }
         Copy-Item -Path $DevHooks -Destination $ProdHooks -Recurse -Force
         $HookCount = (Get-ChildItem -Path $ProdHooks -Recurse -File | Measure-Object).Count
-        Write-Host "✓ Deployed $HookCount hooks" -ForegroundColor Green
+        Write-Host "Deployed $HookCount hooks" -ForegroundColor Green
     }
     
     # Deploy commands directory
@@ -150,7 +158,20 @@ try {
         }
         Copy-Item -Path $DevCommands -Destination $ProdCommands -Recurse -Force
         $CommandCount = (Get-ChildItem -Path $ProdCommands -Recurse -File | Measure-Object).Count
-        Write-Host "✓ Deployed $CommandCount commands" -ForegroundColor Green
+        Write-Host "Deployed $CommandCount commands" -ForegroundColor Green
+    }
+    
+    # Deploy contexts directory
+    $DevContexts = Join-Path $DevPath "contexts"
+    $ProdContexts = Join-Path $ProductionPath "contexts"
+    if (Test-Path $DevContexts) {
+        # Remove existing contexts directory and recreate
+        if (Test-Path $ProdContexts) {
+            Remove-Item -Path $ProdContexts -Recurse -Force
+        }
+        Copy-Item -Path $DevContexts -Destination $ProdContexts -Recurse -Force
+        $ContextCount = (Get-ChildItem -Path $ProdContexts -Recurse -File | Measure-Object).Count
+        Write-Host "Deployed $ContextCount contexts" -ForegroundColor Green
     }
     
     # Create deployment log
@@ -164,27 +185,28 @@ try {
     
     # Log deployed files
     Get-ChildItem -Path $ProductionPath -Recurse -File | ForEach-Object {
-        $DeploymentInfo.deployed_files += $_.FullName.Replace($ProductionPath, "").TrimStart("\")
+        $RelativePath = $_.FullName.Replace($ProductionPath, "").TrimStart("\")
+        $DeploymentInfo.deployed_files += $RelativePath
     }
     
     $DeploymentInfo | ConvertTo-Json -Depth 3 | Out-File -FilePath "$ProductionPath\deployment-log.json"
     
-    Write-Host "`n✓ Deployment completed successfully!" -ForegroundColor Green
+    Write-Host "`nDeployment completed successfully!" -ForegroundColor Green
     Write-Host "  Configuration is now active at: $ProductionPath" -ForegroundColor Gray
     Write-Host "  Files deployed: $($DeploymentInfo.deployed_files.Count)" -ForegroundColor Gray
     
     if ($BackupPath) {
-        Write-Host "`n💡 To rollback if needed:" -ForegroundColor Cyan
-        Write-Host "  .\scripts\restore.ps1 -BackupPath '$BackupPath'" -ForegroundColor Gray
+        Write-Host "`nTo rollback if needed:" -ForegroundColor Cyan
+        Write-Host "  .\scripts\restore.ps1 -BackupPath `"$BackupPath`"" -ForegroundColor Gray
     }
     
 } catch {
-    Write-Host "✗ Deployment failed!" -ForegroundColor Red
+    Write-Host "Deployment failed!" -ForegroundColor Red
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     
     if ($BackupPath) {
-        Write-Host "`n🔄 To restore from backup:" -ForegroundColor Yellow
-        Write-Host "  .\scripts\restore.ps1 -BackupPath '$BackupPath'" -ForegroundColor Gray
+        Write-Host "`nTo restore from backup:" -ForegroundColor Yellow
+        Write-Host "  .\scripts\restore.ps1 -BackupPath `"$BackupPath`"" -ForegroundColor Gray
     }
     
     exit 1

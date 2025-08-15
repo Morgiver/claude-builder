@@ -150,6 +150,14 @@ log_info "Deploying configuration..."
 # Create production directory if it doesn't exist
 mkdir -p "$PRODUCTION_PATH"
 
+# Deploy CLAUDE-build.md as CLAUDE.md
+DEV_CLAUDE="CLAUDE-build.md"
+PROD_CLAUDE="$PRODUCTION_PATH/CLAUDE.md"
+if [ -f "$DEV_CLAUDE" ]; then
+    cp "$DEV_CLAUDE" "$PROD_CLAUDE"
+    log_success "✓ Deployed CLAUDE.md"
+fi
+
 # Deploy settings.json
 DEV_SETTINGS="$DEV_PATH/settings.json"
 PROD_SETTINGS="$PRODUCTION_PATH/settings.json"
