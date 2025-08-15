@@ -1,0 +1,33 @@
+{
+  "description": "Portable configuration paths for Claude Code deployment scripts",
+  "paths": {
+    "windows": {
+      "default": "%USERPROFILE%\\.claude",
+      "alternatives": [
+        "%APPDATA%\\claude"
+      ]
+    },
+    "linux": {
+      "default": "$HOME/.config/claude",
+      "alternatives": [
+        "$HOME/.claude"
+      ]
+    },
+    "macos": {
+      "default": "$HOME/.config/claude", 
+      "alternatives": [
+        "$HOME/.claude",
+        "$HOME/Library/Application Support/claude"
+      ]
+    }
+  },
+  "override": {
+    "description": "Set CLAUDE_CONFIG_PATH environment variable to override default path",
+    "example": "export CLAUDE_CONFIG_PATH=/custom/path/to/claude"
+  },
+  "backup": {
+    "default_directory": "./backups",
+    "max_backups": 10,
+    "compression": false
+  }
+}

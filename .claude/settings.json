@@ -1,0 +1,108 @@
+{
+  "version": "1.0.0",
+  "description": "Claude Code Global Configuration",
+  "environment": {
+    "OS_TYPE": "windows"
+  },
+  "modules": {
+    "global-orchestration": {
+      "enabled": true,
+      "config": {
+        "orchestration": {
+          "default_strategy": "parallel_with_dependencies",
+          "max_concurrent_agents": 3,
+          "timeout_minutes": 30,
+          "retry_attempts": 2,
+          "rollback_on_failure": true
+        },
+        "agent_priorities": {
+          "global-orchestrator": 9
+        },
+        "workflow_templates": {
+          "full_stack_feature": [
+            "planning",
+            "backend_development",
+            "frontend_development",
+            "testing",
+            "documentation",
+            "deployment"
+          ],
+          "bug_fix": [
+            "analysis",
+            "fix_implementation",
+            "testing",
+            "deployment"
+          ],
+          "refactoring": [
+            "analysis",
+            "planning",
+            "implementation",
+            "testing",
+            "documentation_update"
+          ]
+        },
+        "notifications": {
+          "milestone_completion": true,
+          "error_alerts": true,
+          "daily_progress": false
+        }
+      }
+    }
+  },
+  "agents": {
+    "default_timeout": 600000,
+    "max_concurrent": 3,
+    "retry_policy": {
+      "max_attempts": 2,
+      "backoff_seconds": 5
+    }
+  },
+  "custom_agents": {
+    "meta-agent": {
+      "enabled": true,
+      "priority": 10,
+      "description": "Generates a new, complete Claude Code sub-agent configuration file from a user's description",
+      "tools": ["Write", "MultiEdit", "WebFetch", "Read", "Glob", "Grep", "Edit"],
+      "model": "opus",
+      "color": "cyan",
+      "auto_integrate": true,
+      "output_directory": "auto-detect",
+      "naming_convention": "kebab-case",
+      "default_priority": 5
+    },
+    "global-orchestrator": {
+      "enabled": true,
+      "priority": 9,
+      "description": "Use proactively for orchestrating complex multi-step workflows, coordinating between multiple agents, managing parallel task execution with dependencies, and tracking progress across entire projects",
+      "tools": ["Task", "TodoWrite", "Read", "Write", "MultiEdit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "color": "purple"
+    }
+  },
+  "agent_generation": {
+    "templates": {
+      "default_structure": {
+        "frontmatter_fields": ["name", "description", "tools", "model", "color"],
+        "required_sections": ["Purpose", "Instructions", "Report / Response"],
+        "default_model": "sonnet",
+        "available_colors": ["red", "blue", "green", "yellow", "purple", "orange", "pink", "cyan", "magenta", "lime", "teal", "indigo", "violet", "amber", "emerald", "sky", "rose", "slate", "gray", "neutral"]
+      }
+    },
+    "auto_registration": {
+      "enabled": true,
+      "update_priorities": true,
+      "add_to_orchestration": true
+    }
+  },
+  "tools": {
+    "bash": {
+      "timeout_ms": 120000,
+      "use_os_optimization": true
+    }
+  },
+  "hooks": {
+    "pre_task": [],
+    "post_task": [],
+    "on_error": []
+  }
+}
