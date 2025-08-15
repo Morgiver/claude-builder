@@ -191,6 +191,17 @@ if [ -d "$DEV_COMMANDS" ]; then
     log_success "✓ Deployed $COMMAND_COUNT commands"
 fi
 
+# Deploy contexts directory
+DEV_CONTEXTS="$DEV_PATH/contexts"
+PROD_CONTEXTS="$PRODUCTION_PATH/contexts"
+if [ -d "$DEV_CONTEXTS" ]; then
+    # Remove existing contexts directory and recreate
+    [ -d "$PROD_CONTEXTS" ] && rm -rf "$PROD_CONTEXTS"
+    cp -r "$DEV_CONTEXTS" "$PROD_CONTEXTS"
+    CONTEXT_COUNT=$(find "$PROD_CONTEXTS" -type f | wc -l)
+    log_success "✓ Deployed $CONTEXT_COUNT contexts"
+fi
+
 # Create deployment log
 DEPLOYMENT_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 cat > "$PRODUCTION_PATH/deployment-log.json" << EOF
