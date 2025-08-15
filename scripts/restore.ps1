@@ -5,9 +5,13 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$BackupPath,
     [switch]$ListBackups,
-    [switch]$Force,
-    [switch]$Verbose
+    [switch]$Force
 )
+
+# Default to Force mode to avoid interactive prompts
+if (-not $PSBoundParameters.ContainsKey('Force')) {
+    $Force = $true
+}
 
 # Auto-detect production path with fallback options
 $ProductionPath = $null
@@ -113,7 +117,7 @@ if (-not $BackupPath) {
 
 # Validate backup path
 if (-not (Test-Path $BackupPath)) {
-    Write-Host "✗ Backup not found at: $BackupPath" -ForegroundColor Red
+    Write-Host "ERROR: Backup not found at: $BackupPath" -ForegroundColor Red
     exit 1
 }
 
@@ -140,7 +144,7 @@ if (-not $Force) {
         Write-Host "  Size: $($BackupInfo.backup_size_mb) MB" -ForegroundColor Gray
     }
     
-    Write-Host "`n⚠️  This will OVERWRITE the current production configuration!" -ForegroundColor Red
+    Write-Host "`nWARNING: This will OVERWRITE the current production configuration!" -ForegroundColor Red
     $Confirm = Read-Host "`nProceed with restoration? (y/N)"
     
     if ($Confirm -ne 'y' -and $Confirm -ne 'Y') {
@@ -157,7 +161,7 @@ try {
         $PreRestoreBackup = ".\backups\pre-restore-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss')"
         New-Item -ItemType Directory -Path $PreRestoreBackup -Force | Out-Null
         Copy-Item -Path "$ProductionPath\*" -Destination $PreRestoreBackup -Recurse -Force
-        Write-Host "✓ Current config backed up to: $PreRestoreBackup" -ForegroundColor Green
+        Write-Host "Current config backed up to: $PreRestoreBackup" -ForegroundColor Green
     }
     
     # Remove current production directory
@@ -168,9 +172,71 @@ try {
     # Create production directory
     New-Item -ItemType Directory -Path $ProductionPath -Force | Out-Null
     
-    # Restore from backup (exclude backup-info.json)
-    Get-ChildItem -Path $BackupPath | Where-Object { $_.Name -ne "backup-info.json" } | ForEach-Object {
+    # Restore from backup (exclude backup metadata files)
+    Get-ChildItem -Path $BackupPath | Where-Object { $_.Name -notlike "backup-*" } | ForEach-Object {
         Copy-Item -Path $_.FullName -Destination $ProductionPath -Recurse -Force
+    }
+    
+    # Verify integrity if manifest exists
+    $ManifestPath = Join-Path $BackupPath "backup-manifest.txt"
+    if (Test-Path $ManifestPath) {
+        Write-Host "Verifying file integrity using MD5 manifest..." -ForegroundColor Cyan
+        $VerificationFailed = $false
+        $VerifiedCount = 0
+        $FailedCount = 0
+        $MissingCount = 0
+        
+        try {
+            $ManifestLines = Get-Content $ManifestPath | Where-Object { $_ -and -not $_.StartsWith("#") }
+            
+            foreach ($Line in $ManifestLines) {
+                if ($Line -match "^([a-f0-9]+)\s+(.+)$") {
+                    $ExpectedHash = $Matches[1]
+                    $RelativeFilePath = $Matches[2] -replace "^\./", ""
+                    $FullFilePath = Join-Path $ProductionPath $RelativeFilePath.Replace("/", "\")
+                    
+                    if (Test-Path $FullFilePath) {
+                        try {
+                            $CurrentHash = (Get-FileHash -Path $FullFilePath -Algorithm MD5).Hash.ToLower()
+                            
+                            if ($ExpectedHash -eq $CurrentHash) {
+                                $VerifiedCount++
+                            } else {
+                                Write-Host "  ERROR: Integrity check failed for: $RelativeFilePath" -ForegroundColor Red
+                                Write-Host "    Expected: $ExpectedHash" -ForegroundColor Red
+                                Write-Host "    Found:    $CurrentHash" -ForegroundColor Red
+                                $VerificationFailed = $true
+                                $FailedCount++
+                            }
+                        } catch {
+                            Write-Host "  WARNING: Could not verify: $RelativeFilePath" -ForegroundColor Yellow
+                            $FailedCount++
+                        }
+                    } else {
+                        Write-Host "  WARNING: Missing file: $RelativeFilePath" -ForegroundColor Yellow
+                        $MissingCount++
+                    }
+                }
+            }
+            
+            # Summary of verification
+            Write-Host "Integrity verification summary:" -ForegroundColor Cyan
+            Write-Host "  Verified: $VerifiedCount files" -ForegroundColor Green
+            if ($FailedCount -gt 0) { Write-Host "  Failed: $FailedCount files" -ForegroundColor Red }
+            if ($MissingCount -gt 0) { Write-Host "  Missing: $MissingCount files" -ForegroundColor Yellow }
+            
+            if ($VerificationFailed -or $MissingCount -gt 0) {
+                Write-Host "WARNING: Integrity verification found issues!" -ForegroundColor Red
+                Write-Host "Restore completed but some files may be corrupted or missing." -ForegroundColor Yellow
+            } else {
+                Write-Host "All files passed integrity verification" -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "ERROR: Error during integrity verification: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "WARNING: No integrity manifest found - skipping verification" -ForegroundColor Yellow
+        Write-Host "  (Manifest would be available if backup was created with MD5 support)" -ForegroundColor Gray
     }
     
     # Create restoration log
@@ -184,15 +250,18 @@ try {
     
     $RestorationInfo | ConvertTo-Json -Depth 3 | Out-File -FilePath "$ProductionPath\restoration-log.json"
     
-    Write-Host "`n✓ Configuration restored successfully!" -ForegroundColor Green
+    Write-Host "`nConfiguration restored successfully!" -ForegroundColor Green
     Write-Host "  Restored from: $BackupPath" -ForegroundColor Gray
     Write-Host "  Files restored: $($RestorationInfo.restored_files)" -ForegroundColor Gray
-    if ($PreRestoreBackup) {
-        Write-Host "  Previous config saved to: $PreRestoreBackup" -ForegroundColor Gray
+    
+    # Clean up pre-restore backup since restoration was successful
+    if ($PreRestoreBackup -and (Test-Path $PreRestoreBackup)) {
+        Remove-Item -Path $PreRestoreBackup -Recurse -Force
+        Write-Host "  Cleaned up temporary pre-restore backup" -ForegroundColor Gray
     }
     
 } catch {
-    Write-Host "✗ Restoration failed!" -ForegroundColor Red
+    Write-Host "ERROR: Restoration failed!" -ForegroundColor Red
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }

@@ -15,7 +15,6 @@ if [ ! -z "${CLAUDE_CONFIG_PATH:-}" ]; then
 else
     # Try default Unix paths in order
     UNIX_PATHS=(
-        "$HOME/.config/claude"
         "$HOME/.claude"
     )
     
@@ -50,7 +49,7 @@ else
 fi
 
 # Parse command line arguments
-FORCE=false
+FORCE=true  # Default to force mode to avoid interactive prompts
 SKIP_BACKUP=false
 VERBOSE=false
 

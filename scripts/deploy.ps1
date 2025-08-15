@@ -7,6 +7,11 @@ param(
     [switch]$Verbose
 )
 
+# Default to Force mode to avoid interactive prompts
+if (-not $PSBoundParameters.ContainsKey('Force')) {
+    $Force = $true
+}
+
 # Configuration
 $DevPath = ".\.claude"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition

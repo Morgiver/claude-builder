@@ -1,19 +1,18 @@
 #!/bin/bash
 # Claude Code Configuration Backup Script (Linux/macOS)
-# Creates a complete timestamped backup of the production configuration
+# Creates a timestamped backup of the current Claude Code configuration
 
 set -euo pipefail
 
 # Configuration
 BACKUP_PATH="${1:-./backups}"
 
-# Auto-detect production path with fallback options
+# Auto-detect production path - SAME AS DEPLOY.SH
 if [ ! -z "${CLAUDE_CONFIG_PATH:-}" ]; then
     PRODUCTION_PATH="$CLAUDE_CONFIG_PATH"
 else
-    # Try default Unix paths in order
+    # Try default Unix paths in order - SAME ORDER AS DEPLOY.SH
     UNIX_PATHS=(
-        "$HOME/.config/claude"
         "$HOME/.claude"
     )
     
@@ -35,6 +34,7 @@ else
         PRODUCTION_PATH="${UNIX_PATHS[0]}"
     fi
 fi
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_NAME="claude-config-backup-$TIMESTAMP"
 FULL_BACKUP_PATH="$BACKUP_PATH/$BACKUP_NAME"
@@ -63,23 +63,55 @@ fi
 # Check if production directory exists
 if [ ! -d "$PRODUCTION_PATH" ]; then
     log_warning "Warning: Production directory not found at $PRODUCTION_PATH"
-    log_warning "This might be the first deployment."
-    exit 0
+    log_warning "Creating empty backup for deployment..."
+    mkdir -p "$FULL_BACKUP_PATH"
+else
+    log_info "Starting backup of Claude Code configuration..."
+    log_gray "Source: $PRODUCTION_PATH"
+    log_gray "Destination: $FULL_BACKUP_PATH"
+    
+    # Create timestamped backup directory
+    mkdir -p "$FULL_BACKUP_PATH"
+    
+    # Copy entire configuration directory
+    cp -r "$PRODUCTION_PATH"/* "$FULL_BACKUP_PATH"/ 2>/dev/null || true
 fi
 
-log_info "Starting backup of Claude Code configuration..."
-log_gray "Source: $PRODUCTION_PATH"
-log_gray "Destination: $FULL_BACKUP_PATH"
-
-# Create timestamped backup directory
-mkdir -p "$FULL_BACKUP_PATH"
-
-# Copy entire .config/claude directory
-cp -r "$PRODUCTION_PATH"/* "$FULL_BACKUP_PATH"/ 2>/dev/null || true
-
 # Calculate backup statistics
-FILES_COUNT=$(find "$FULL_BACKUP_PATH" -type f | wc -l)
-BACKUP_SIZE=$(du -sh "$FULL_BACKUP_PATH" | cut -f1)
+FILES_COUNT=$(find "$FULL_BACKUP_PATH" -type f 2>/dev/null | wc -l)
+BACKUP_SIZE=$(du -sh "$FULL_BACKUP_PATH" 2>/dev/null | cut -f1)
+
+# Create integrity manifest with MD5 hashes
+log_gray "Creating integrity manifest..."
+MANIFEST_FILE="$FULL_BACKUP_PATH/backup-manifest.txt"
+HAS_MANIFEST=false
+
+if command -v md5sum >/dev/null 2>&1 || command -v md5 >/dev/null 2>&1; then
+    # Create manifest for all files except backup metadata
+    cd "$FULL_BACKUP_PATH" || exit 1
+    {
+        find . -type f ! -name "backup-*.txt" ! -name "backup-*.json" | sort | while read -r file; do
+            if command -v md5sum >/dev/null 2>&1; then
+                md5sum "$file" 2>/dev/null || true
+            elif command -v md5 >/dev/null 2>&1; then
+                HASH=$(md5 -q "$file" 2>/dev/null || true)
+                [ ! -z "$HASH" ] && echo "$HASH  $file" || true
+            fi
+        done
+    } > backup-manifest.txt 2>/dev/null
+    cd - >/dev/null
+    
+    if [ -s "$MANIFEST_FILE" ]; then
+        HAS_MANIFEST=true
+        HASH_COUNT=$(wc -l < "$MANIFEST_FILE")
+        log_success "✓ Created integrity manifest with $HASH_COUNT file hashes"
+    else
+        rm -f "$MANIFEST_FILE"
+        log_warning "⚠ Could not create integrity manifest"
+    fi
+else
+    log_warning "⚠ MD5 command not available - integrity verification disabled"
+fi
 
 # Create backup metadata
 cat > "$FULL_BACKUP_PATH/backup-info.json" << EOF
@@ -90,7 +122,8 @@ cat > "$FULL_BACKUP_PATH/backup-info.json" << EOF
   "files_backed_up": $FILES_COUNT,
   "backup_size": "$BACKUP_SIZE",
   "platform": "$(uname -s)",
-  "hostname": "$(hostname)"
+  "hostname": "$(hostname)",
+  "has_manifest": $HAS_MANIFEST
 }
 EOF
 
@@ -100,7 +133,7 @@ log_gray "  Backup size: $BACKUP_SIZE"
 log_gray "  Backup location: $FULL_BACKUP_PATH"
 
 # Clean old backups (keep last 10)
-OLD_BACKUPS=$(find "$BACKUP_PATH" -maxdepth 1 -type d -name "claude-config-backup-*" | sort -r | tail -n +11)
+OLD_BACKUPS=$(find "$BACKUP_PATH" -maxdepth 1 -type d -name "claude-config-backup-*" 2>/dev/null | sort -r | tail -n +11)
 if [ ! -z "$OLD_BACKUPS" ]; then
     echo "$OLD_BACKUPS" | while read -r old_backup; do
         rm -rf "$old_backup"

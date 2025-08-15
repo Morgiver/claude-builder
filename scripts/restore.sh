@@ -13,7 +13,6 @@ if [ ! -z "${CLAUDE_CONFIG_PATH:-}" ]; then
 else
     # Try default Unix paths in order
     UNIX_PATHS=(
-        "$HOME/.config/claude"
         "$HOME/.claude"
     )
     
@@ -40,7 +39,7 @@ fi
 # Parse command line arguments
 BACKUP_PATH=""
 LIST_BACKUPS=false
-FORCE=false
+FORCE=true  # Default to force mode to avoid interactive prompts
 VERBOSE=false
 
 while [[ $# -gt 0 ]]; do
@@ -225,14 +224,97 @@ if [ -d "$PRODUCTION_PATH" ]; then
     log_success "✓ Current config backed up to: $PRE_RESTORE_BACKUP"
 fi
 
-# Remove current production directory
-[ -d "$PRODUCTION_PATH" ] && rm -rf "$PRODUCTION_PATH"
+# IMPORTANT: Completely clean the production directory
+log_warning "Cleaning production directory..."
+if [ -d "$PRODUCTION_PATH" ]; then
+    # Save only essential runtime files that shouldn't be deleted
+    TEMP_SAVE="/tmp/claude-runtime-$(date +%s)"
+    mkdir -p "$TEMP_SAVE"
+    
+    # Save runtime files if they exist (shell-snapshots, ide locks, etc.)
+    [ -d "$PRODUCTION_PATH/ide" ] && cp -r "$PRODUCTION_PATH/ide" "$TEMP_SAVE/" 2>/dev/null || true
+    [ -d "$PRODUCTION_PATH/shell-snapshots" ] && cp -r "$PRODUCTION_PATH/shell-snapshots" "$TEMP_SAVE/" 2>/dev/null || true
+    [ -d "$PRODUCTION_PATH/statsig" ] && cp -r "$PRODUCTION_PATH/statsig" "$TEMP_SAVE/" 2>/dev/null || true
+    [ -d "$PRODUCTION_PATH/todos" ] && cp -r "$PRODUCTION_PATH/todos" "$TEMP_SAVE/" 2>/dev/null || true
+    [ -d "$PRODUCTION_PATH/projects" ] && cp -r "$PRODUCTION_PATH/projects" "$TEMP_SAVE/" 2>/dev/null || true
+    
+    # Completely remove the directory
+    rm -rf "$PRODUCTION_PATH"
+    
+    # Recreate and restore runtime files
+    mkdir -p "$PRODUCTION_PATH"
+    cp -r "$TEMP_SAVE"/* "$PRODUCTION_PATH"/ 2>/dev/null || true
+    rm -rf "$TEMP_SAVE"
+else
+    mkdir -p "$PRODUCTION_PATH"
+fi
 
-# Create production directory
-mkdir -p "$PRODUCTION_PATH"
+# Restore from backup (exclude backup metadata files)
+log_info "Copying backup files..."
+find "$BACKUP_PATH" -mindepth 1 -maxdepth 1 ! -name "backup-info.json" ! -name "backup-manifest.txt" -exec cp -r {} "$PRODUCTION_PATH"/ \;
 
-# Restore from backup (exclude backup-info.json)
-find "$BACKUP_PATH" -mindepth 1 -maxdepth 1 ! -name "backup-info.json" -exec cp -r {} "$PRODUCTION_PATH"/ \;
+# Verify integrity if manifest exists
+MANIFEST_PATH="$(cd "$BACKUP_PATH" && pwd)/backup-manifest.txt"
+if [ -f "$MANIFEST_PATH" ] && [ -s "$MANIFEST_PATH" ]; then
+    log_info "Verifying file integrity using MD5 manifest..."
+    VERIFICATION_FAILED=false
+    VERIFIED_COUNT=0
+    FAILED_COUNT=0
+    MISSING_COUNT=0
+    
+    cd "$PRODUCTION_PATH"
+    while IFS= read -r line; do
+        # Skip empty lines and comments
+        [ -z "$line" ] && continue
+        [[ "$line" =~ ^#.* ]] && continue
+        
+        # Extract hash and filename from manifest line (format: "hash  filename")
+        EXPECTED_HASH=$(echo "$line" | awk '{print $1}')
+        FILE_PATH=$(echo "$line" | sed 's/^[^ ]* *//')  # Everything after first space
+        
+        if [ -f "$FILE_PATH" ]; then
+            # Calculate current hash
+            if command -v md5sum >/dev/null 2>&1; then
+                CURRENT_HASH=$(md5sum "$FILE_PATH" 2>/dev/null | awk '{print $1}')
+            elif command -v md5 >/dev/null 2>&1; then
+                CURRENT_HASH=$(md5 -q "$FILE_PATH" 2>/dev/null)
+            else
+                log_warning "  ⚠ MD5 command not available - skipping verification"
+                break
+            fi
+            
+            if [ "$EXPECTED_HASH" = "$CURRENT_HASH" ]; then
+                VERIFIED_COUNT=$((VERIFIED_COUNT + 1))
+            else
+                log_error "  ✗ Integrity check failed for: $FILE_PATH"
+                log_error "    Expected: $EXPECTED_HASH"
+                log_error "    Found:    $CURRENT_HASH"
+                VERIFICATION_FAILED=true
+                FAILED_COUNT=$((FAILED_COUNT + 1))
+            fi
+        else
+            log_warning "  ⚠ Missing file: $FILE_PATH"
+            MISSING_COUNT=$((MISSING_COUNT + 1))
+        fi
+    done < "$MANIFEST_PATH"
+    cd - >/dev/null
+    
+    # Summary of verification
+    log_info "Integrity verification summary:"
+    log_success "  ✓ Verified: $VERIFIED_COUNT files"
+    [ $FAILED_COUNT -gt 0 ] && log_error "  ✗ Failed: $FAILED_COUNT files"
+    [ $MISSING_COUNT -gt 0 ] && log_warning "  ⚠ Missing: $MISSING_COUNT files"
+    
+    if [ "$VERIFICATION_FAILED" = true ] || [ $MISSING_COUNT -gt 0 ]; then
+        log_error "⚠️  Integrity verification found issues!"
+        log_warning "Restore completed but some files may be corrupted or missing."
+    else
+        log_success "✓ All files passed integrity verification"
+    fi
+else
+    log_warning "⚠ No integrity manifest found - skipping verification"
+    log_gray "  (Manifest would be available if backup was created with MD5 support)"
+fi
 
 RESTORED_FILES=$(find "$PRODUCTION_PATH" -type f | wc -l)
 
@@ -254,4 +336,9 @@ echo
 log_success "✓ Configuration restored successfully!"
 log_gray "  Restored from: $BACKUP_PATH"
 log_gray "  Files restored: $RESTORED_FILES"
-[ ! -z "$PRE_RESTORE_BACKUP" ] && log_gray "  Previous config saved to: $PRE_RESTORE_BACKUP"
+
+# Clean up pre-restore backup since restoration was successful
+if [ ! -z "$PRE_RESTORE_BACKUP" ] && [ -d "$PRE_RESTORE_BACKUP" ]; then
+    rm -rf "$PRE_RESTORE_BACKUP"
+    log_gray "  Cleaned up temporary pre-restore backup"
+fi
