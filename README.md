@@ -171,13 +171,19 @@ bash .claude/hooks/examples/validation-hook.sh
 ### Team Workflow Example
 ```bash
 # Team lead creates configuration
-git clone https://github.com/Morgiver/claude-builder.git
+# 1. Fork the repository on GitHub
+# 2. Clone the fork and customize
+git clone https://github.com/your-username/claude-builder.git
+cd claude-builder
 # Customize .claude/ for team needs
 git add . && git commit -m "Team Claude configuration"
-git push
+git push origin main
+# 3. Create pull request to share with team
 
 # Team members get instant setup
-git clone https://github.com/Morgiver/claude-builder.git
+# 1. Fork the team's customized repository
+# 2. Clone and deploy
+git clone https://github.com/your-team/claude-builder.git
 cd claude-builder
 ./scripts/deploy.sh  # Done! Claude Code now has team configuration
 ```
