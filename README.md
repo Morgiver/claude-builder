@@ -42,6 +42,7 @@ cd claude-builder
 ✅ **Creates backup** of existing configuration  
 ✅ **Validates** settings.json syntax  
 ✅ **Deploys** settings, agents, hooks, and commands  
+✅ **Runs fully automated** - no confirmation prompts  
 ✅ **Provides rollback** instructions if needed  
 
 ## 📁 What You Get
@@ -97,13 +98,14 @@ export CLAUDE_CONFIG_PATH=/your/custom/path
 ### 🚀 Deployment Commands
 ```bash
 # Standard deployment (recommended)
-./scripts/deploy.sh                # Auto-backup + deploy + validation
+./scripts/deploy.sh                # Auto-backup + deploy + validation (non-interactive)
 
-# Advanced options
-./scripts/deploy.sh --force         # Skip confirmation prompts
+# Advanced options  
 ./scripts/deploy.sh --skip-backup   # Deploy without backup (risky)
 ./scripts/deploy.sh --verbose       # Detailed output
 ```
+
+> 💡 **Note**: All scripts now run in non-interactive mode by default for automation-friendly deployments. Confirmation prompts are automatically skipped.
 
 ### 💾 Backup & Recovery
 ```bash
@@ -116,9 +118,11 @@ export CLAUDE_CONFIG_PATH=/your/custom/path
 # Restore specific backup
 ./scripts/restore.sh --backup-path ./backups/backup-20250115_143022
 
-# Interactive restore (shows menu)
+# Quick restore (non-interactive)
 ./scripts/restore.sh
 ```
+
+> 🧹 **Auto-Cleanup**: Pre-restoration backups are automatically cleaned up after successful restoration to save disk space.
 
 ### 🔍 Validation & Health Checks
 ```bash
