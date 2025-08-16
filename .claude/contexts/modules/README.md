@@ -6,6 +6,7 @@ This directory contains modular configuration components for Claude Code. Each m
 
 | Module | Description | Use Cases | Tools Required |
 |--------|-------------|-----------|----------------|
+| [project-management](./project-management/) | Structured project management methodologies adapted for AI agents | Iterative development, complex features, collaborative coding | TodoWrite, Task |
 | [global-orchestration](./global-orchestration/) | Orchestrates complex multi-step workflows and coordinates task execution across different domains | Project management, CI/CD coordination, complex deployments | Task, TodoWrite, MultiEdit |
 
 ## Module Structure

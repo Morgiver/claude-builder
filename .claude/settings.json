@@ -5,6 +5,28 @@
     "OS_TYPE": "windows"
   },
   "modules": {
+    "project-management": {
+      "enabled": true,
+      "description": "Structured project management methodologies for development work",
+      "default_methodology": null,
+      "auto_suggest": true,
+      "adapt_to_team_size": true,
+      "available_methodologies": {
+        "agile-scrum": {
+          "name": "Agile Scrum for AI Agents",
+          "description": "Iterative development with user intervention points",
+          "best_for": ["evolving_requirements", "complex_features", "collaborative_development"],
+          "intervention_modes": ["autonomous", "collaborative", "supervised", "custom"]
+        },
+        "waterfall": {
+          "name": "Waterfall for AI Agents", 
+          "description": "Sequential phase-based development with comprehensive documentation",
+          "best_for": ["stable_requirements", "regulated_environments", "large_complex_systems"],
+          "phase_gates": true,
+          "documentation_level": "comprehensive"
+        }
+      }
+    },
     "global-orchestration": {
       "enabled": true,
       "config": {

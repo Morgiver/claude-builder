@@ -26,6 +26,9 @@ Module configurations are stored in `settings.json` under the `modules` section.
 📁 **[Module Documentation](.claude/contexts/modules/)**
 
 Available modules:
+- `project-management` - Structured project management methodologies for AI agents
+  - **Agile Scrum** - Adaptive Scrum with iterations, user intervention modes, and developer control points
+  - **Waterfall** - Sequential phase-based development with comprehensive documentation and validation gates
 - `global-orchestration` - Advanced workflow orchestration and task coordination
 
 ### Custom Agents
