@@ -64,6 +64,7 @@ claude-builder/
 │   │   ├── examples/        # Command templates
 │   │   └── README.md        # Command documentation
 │   └── contexts/            # Documentation & configs
+│       └── modules/         # Modular configuration system
 ├── 🧪 tests/                # Test framework & validation
 │   ├── README.md            # Testing documentation
 │   └── yolo-protection/     # YOLO mode protection tests
@@ -155,14 +156,27 @@ bash .claude/hooks/examples/validation-hook.sh
 - **Cross-Platform Scripts** - PowerShell, Bash, and Python examples
 - **Development Tools** - Testing, validation, and debugging helpers
 
-### 📦 Easy Extension
+### 📦 Modular Extension System
 ```bash
 # Add new configuration module
-1. Edit .claude/settings.json
-2. Add documentation to .claude/contexts/modules/
-3. Test locally with: python3 -m json.tool .claude/settings.json
-4. Deploy with: ./scripts/deploy.sh
+1. Create module in .claude/contexts/modules/<module-name>/
+2. Add module configuration to .claude/settings.json
+3. Update documentation (.claude/contexts/modules/README.md, CLAUDE-build.md)
+4. Test locally with: python3 -m json.tool .claude/settings.json
+5. Deploy with: ./scripts/deploy.sh
 ```
+
+#### 🧩 Available Modules
+| Module | Description | Components |
+|--------|-------------|------------|
+| **project-management** | Structured methodologies for AI agents | Agile Scrum, Waterfall |
+| **global-orchestration** | Complex workflow coordination | Multi-agent task management |
+
+#### 🔧 Module Management
+- **Self-documenting** - Each module includes comprehensive documentation
+- **Validation rules** - Built-in checklist to ensure consistency
+- **Easy integration** - Automatic settings.json integration
+- **Template system** - Standardized structure for new modules
 
 ## 🤝 Perfect for Teams
 
@@ -200,6 +214,7 @@ cd claude-builder
 📋 **[CLAUDE.md](CLAUDE.md)** - Complete development and deployment guide  
 📊 **[CLAUDE-build.md](CLAUDE-build.md)** - Configuration structure and modules  
 ⚙️ **[scripts/config.json](scripts/config.json)** - Platform path configuration  
+🧩 **[.claude/contexts/modules/README.md](.claude/contexts/modules/)** - Module system documentation  
 🤖 **[.claude/agents/README.md](.claude/agents/)** - Agent development guide  
 🔗 **[.claude/hooks/README.md](.claude/hooks/)** - Hook system documentation  
 🛠️ **[.claude/commands/README.md](.claude/commands/)** - Custom command creation  
