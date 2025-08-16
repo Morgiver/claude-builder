@@ -176,6 +176,65 @@ ls .claude/commands/
 4. **Backup global config** before each deployment
 5. **Test agents** work correctly after deployment
 
+## Module Update Rules
+
+When adding or modifying modules, **ALWAYS** update the following files in this order:
+
+### When Adding a New Module
+
+1. **Create Module Files**:
+   - `.claude/contexts/modules/<module-name>/README.md` - Module documentation
+   - `.claude/contexts/modules/<module-name>/` - Module directory structure
+
+2. **Update Configuration**:
+   - `.claude/settings.json` - Add module in `modules` section with configuration
+
+3. **Update Documentation** (ALL required):
+   - `.claude/contexts/modules/README.md` - Add module to the index table
+   - `CLAUDE-build.md` - Add module to the "Available modules" list
+   - `CLAUDE.md` (if needed) - Update project structure or guidelines
+
+### When Adding a Methodology/Component to a Module
+
+1. **Create Component**:
+   - `.claude/contexts/modules/<module-name>/<component-type>/<component>.md`
+
+2. **Update Module Documentation**:
+   - `.claude/contexts/modules/<module-name>/README.md` - Update index/table
+
+3. **Update Global Documentation**:
+   - `CLAUDE-build.md` - Update module description if significant
+
+### When Adding a Custom Agent
+
+1. **Create Agent**:
+   - `.claude/agents/<agent-name>.md` - Agent configuration
+
+2. **Update Configuration**:
+   - `.claude/settings.json` - Add agent in `custom_agents` section
+
+3. **Update Documentation**:
+   - `CLAUDE-build.md` - Add agent to "Available agents" list
+   - `.claude/contexts/agents.md` (if exists) - Update agent registry
+
+### When Modifying Existing Components
+
+1. **Make the Change** in the component file
+2. **Update Version/Status** if significant change
+3. **Update Documentation** if behavior changes
+
+### Validation Checklist
+
+Before completing any module/agent addition:
+- [ ] Component files created
+- [ ] settings.json updated
+- [ ] Module README.md updated
+- [ ] Global modules/README.md updated
+- [ ] CLAUDE-build.md updated
+- [ ] Integration points documented
+
+**Note**: Use TodoWrite to track these updates and ensure none are missed.
+
 ---
 
 *This workspace separates development from the live Claude Code configuration, allowing safe iteration and testing.*
